@@ -1,5 +1,4 @@
 const { Telegraf, Markup, session } = require('telegraf');
-const nodemailer = require('nodemailer');
 require('dotenv').config();
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
@@ -13,16 +12,6 @@ bot.telegram.getMe().then((botInfo) => {
 const referrals = {};
 const balances = {};
 const referralBonusUsed = {};
-
-const transporter = nodemailer.createTransport({
-    host: 'smtp.mail.ru',
-    port: 465,
-    secure: true, // Используем SSL
-    auth: {
-        user: process.env.EMAIL_USER, // ваш email на Mail.ru
-        pass: process.env.EMAIL_PASS  // ваш пароль от почты
-    }
-});
 
 const getInvoice = (id, referrerId = null) => {
     const isReferral = referrerId && id.toString() !== referrerId && !referralBonusUsed[id];
@@ -58,19 +47,11 @@ bot.start((ctx) => {
     balances[ctx.from.id] = balances[ctx.from.id] || 0;
     referralBonusUsed[ctx.from.id] = referralBonusUsed[ctx.from.id] || false;
 
-    ctx.reply('Введите ваш email для получения подтверждения:', Markup.removeKeyboard());
-});
-
-bot.on('text', (ctx, next) => {
-    if (!ctx.session.email && ctx.message.text.includes('@')) {
-        ctx.session.email = ctx.message.text;
-        return ctx.reply('Спасибо! Теперь выберите действие:',
-            Markup.keyboard([
-                ['Pay', 'Получить ссылку', 'Проверить счёт']
-            ]).oneTime().resize()
-        );
-    }
-    return next();
+    ctx.reply('Добро пожаловать! Выберите действие:',
+        Markup.keyboard([
+            ['Pay', 'Получить ссылку', 'Проверить счёт']
+        ]).oneTime().resize()
+    );
 });
 
 bot.hears('Pay', (ctx) => {
@@ -105,34 +86,6 @@ bot.on('successful_payment', async (ctx) => {
     }
 
     await ctx.reply('Платёж успешно выполнен! ✅');
-
-    if (ctx.session.email) {
-        const certificateHTML = `
-            <h1 style="color: #4CAF50;">СЕРТИФИКАТ ПОДТВЕРЖДЕНИЯ ОПЛАТЫ</h1>
-            <p>Здравствуйте, <strong>${ctx.from.first_name}</strong>!</p>
-            <p>Вы успешно оплатили <strong>${amount} руб.</strong></p>
-            <p>Номер сертификата: <strong>${payload.unique_id}</strong></p>
-            <p>Дата: <strong>${new Date().toLocaleDateString()}</strong></p>
-            <br>
-            <p style="font-style: italic;">Подпись: ___________________</p>
-            <p>Спасибо за покупку!</p>
-        `;
-
-        const mailOptions = {
-            from: process.env.EMAIL_USER,
-            to: ctx.session.email,
-            subject: 'Сертификат подтверждения оплаты',
-            html: certificateHTML
-        };
-
-        transporter.sendMail(mailOptions, (error, info) => {
-            if (error) {
-                console.error('Ошибка при отправке письма:', error);
-            } else {
-                console.log('Письмо отправлено:', info.response);
-            }
-        });
-    }
 });
 
 bot.launch();
