@@ -9,6 +9,18 @@ bot.telegram.getMe().then((botInfo) => {
     bot.options.username = botInfo.username;
 });
 
+// === Webhook настройка ===
+const PORT = process.env.PORT || 3000;
+const WEBHOOK_URL = 'https://tgbot-gev7.onrender.com';
+
+// Установка Webhook
+bot.telegram.setWebhook(`${WEBHOOK_URL}/bot${process.env.BOT_TOKEN}`);
+
+// Запуск сервера для Webhook
+bot.startWebhook(`/bot${process.env.BOT_TOKEN}`, null, PORT);
+
+// =========================
+
 const referrals = {};
 const balances = {};
 const referralBonusUsed = {};
@@ -87,5 +99,3 @@ bot.on('successful_payment', async (ctx) => {
 
     await ctx.reply('Платёж успешно выполнен! ✅');
 });
-
-bot.launch();
